@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>POP Genie — Search Dashboard</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #0d0d1a;
+      --surface: #13132b;
+      --card:    #1a1a35;
+      --border:  #2a2a50;
+      --purple:  #7c3aed;
+      --purple2: #a855f7;
+      --blue:    #3b82f6;
+      --green:   #10b981;
+      --yellow:  #f59e0b;
+      --red:     #ef4444;
+      --text:    #e2e8f0;
+      --muted:   #94a3b8;
+      --dim:     #4a5568;
+    }
+
+    body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 14px; min-height: 100vh; }
+
+    /* ─── Setup screen ─────────────────────────────────── */
+    #setup-screen {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 40px 16px 60px;
+    }
+    .setup-logo {
+      font-size: 22px;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--purple2), var(--blue));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 6px;
+    }
+    .setup-sub { color: var(--muted); font-size: 13px; margin-bottom: 32px; text-align: center; }
+
+    .setup-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 24px;
+      width: 100%;
+      max-width: 560px;
+      margin-bottom: 16px;
+    }
+    .setup-card-title {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .v2c { color: var(--blue); }
+    .v3c { color: var(--green); }
+    .v4c { color: var(--purple2); }
+    .gen-c { color: var(--muted); }
+
+    .field-group { margin-bottom: 14px; }
+    .field-group:last-child { margin-bottom: 0; }
+    .field-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 5px;
+    }
+    .field-label span { font-size: 12px; color: var(--muted); }
+    .field-label code { font-size: 10px; color: var(--dim); background: var(--card); padding: 1px 5px; border-radius: 4px; }
+    .field-input {
+      width: 100%;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      color: var(--text);
+      font-size: 13px;
+      font-family: monospace;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .field-input:focus { border-color: var(--purple2); }
+    .field-input::placeholder { color: var(--dim); font-family: -apple-system, sans-serif; font-style: italic; }
+
+    /* JSON import */
+    .import-toggle {
+      background: none;
+      border: none;
+      color: var(--blue);
+      font-size: 12px;
+      cursor: pointer;
+      padding: 0;
+      text-decoration: underline;
+      width: 100%;
+      max-width: 560px;
+      text-align: center;
+      margin-bottom: 16px;
+    }
+    #json-import-area {
+      display: none;
+      width: 100%;
+      max-width: 560px;
+      margin-bottom: 16px;
+    }
+    .json-textarea {
+      width: 100%;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      color: var(--text);
+      font-size: 12px;
+      font-family: monospace;
+      height: 100px;
+      resize: vertical;
+      outline: none;
+    }
+    .json-textarea:focus { border-color: var(--blue); }
+    .btn-import {
+      margin-top: 8px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--blue);
+      border-radius: 8px;
+      padding: 7px 16px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .btn-import:hover { border-color: var(--blue); }
+    .import-hint { font-size: 11px; color: var(--dim); margin-top: 6px; }
+
+    .btn-save {
+      width: 100%;
+      max-width: 560px;
+      background: linear-gradient(135deg, var(--purple), var(--blue));
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 14px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: 0.3px;
+      transition: opacity 0.15s;
+      margin-top: 4px;
+    }
+    .btn-save:hover { opacity: 0.9; }
+    .setup-error {
+      color: var(--red);
+      font-size: 12px;
+      margin-top: 10px;
+      text-align: center;
+      max-width: 560px;
+    }
+
+    /* ─── Main screen ──────────────────────────────────── */
+    #main-screen { display: none; }
+
+    .topbar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 13px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .logo {
+      font-size: 17px;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--purple2), var(--blue));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      white-space: nowrap;
+    }
+    .topbar-sep { flex: 1; }
+    .btn-settings {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      border-radius: 7px;
+      padding: 5px 12px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .btn-settings:hover { border-color: var(--purple2); color: var(--text); }
+    .user-pill {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 4px 10px;
+      font-size: 11px;
+      color: var(--muted);
+      font-family: monospace;
+    }
+
+    .search-wrap { padding: 22px 20px 16px; max-width: 1000px; margin: 0 auto; }
+    .search-row { display: flex; gap: 10px; align-items: center; }
+    .search-input {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 13px 18px;
+      color: var(--text);
+      font-size: 16px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .search-input:focus { border-color: var(--purple2); }
+    .search-input::placeholder { color: var(--dim); }
+
+    .coin-wrap { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+    .coin-wrap label { font-size: 10px; color: var(--yellow); }
+    .coin-input {
+      width: 100px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      color: var(--text);
+      font-size: 14px;
+      outline: none;
+      text-align: center;
+    }
+    .coin-input:focus { border-color: var(--yellow); }
+
+    .btn-search {
+      background: linear-gradient(135deg, var(--purple), var(--blue));
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 13px 28px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+    .btn-search:hover { opacity: 0.9; }
+    .btn-search:active { transform: scale(0.98); }
+    .btn-search:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .hint { color: var(--dim); font-size: 11px; margin-top: 7px; text-align: center; }
+
+    /* ─── Results grid ─────────────────────────────────── */
+    .results-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      padding: 0 20px 32px;
+    }
+    @media (max-width: 860px) { .results-grid { grid-template-columns: 1fr; } }
+
+    .engine-col {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .engine-header {
+      padding: 12px 14px 10px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .engine-name { font-weight: 700; font-size: 12px; letter-spacing: 0.5px; }
+    .engine-desc { color: var(--muted); font-size: 11px; flex: 1; }
+
+    .status-pill { font-size: 11px; padding: 3px 9px; border-radius: 20px; font-weight: 600; white-space: nowrap; }
+    .s-idle    { background: #1e293b; color: var(--muted); }
+    .s-loading { background: #1c1c3a; color: #818cf8; animation: pulse 1s infinite; }
+    .s-ok      { background: #052e16; color: var(--green); }
+    .s-error   { background: #2d0a0a; color: var(--red); }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
+
+    .progress-bar { height: 2px; background: var(--border); }
+    .progress-fill { height: 100%; background: linear-gradient(90deg, var(--purple), var(--blue)); width: 0%; transition: width .3s; }
+
+    .stats-row {
+      display: none;
+      gap: 12px;
+      padding: 7px 14px;
+      border-bottom: 1px solid var(--border);
+      font-size: 11px;
+      color: var(--muted);
+      background: var(--card);
+      flex-wrap: wrap;
+    }
+    .stat strong { color: var(--text); }
+
+    .product-list { overflow-y: auto; max-height: calc(100vh - 250px); min-height: 180px; }
+    .product-list::-webkit-scrollbar { width: 4px; }
+    .product-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .product-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 9px;
+      padding: 8px 13px;
+      border-bottom: 1px solid #1d1d38;
+      transition: background .1s;
+    }
+    .product-item:hover { background: var(--card); }
+    .product-item:last-child { border-bottom: none; }
+
+    .rank { color: var(--dim); font-size: 11px; min-width: 22px; padding-top: 2px; font-variant-numeric: tabular-nums; }
+    .product-body { flex: 1; min-width: 0; }
+    .product-brand { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .product-title { font-size: 12px; color: var(--text); line-height: 1.4; margin: 1px 0 4px; }
+    .product-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .price  { color: var(--text); font-weight: 600; font-size: 12px; }
+    .mrp    { color: var(--dim); font-size: 10px; text-decoration: line-through; }
+    .badge  { font-size: 10px; padding: 1px 7px; border-radius: 10px; }
+    .b-coins  { background: #2d1b4a; color: #c084fc; }
+    .b-rating { background: #1a2e1a; color: var(--green); }
+    .b-sim    { background: #1a2a3a; color: var(--blue); font-family: monospace; }
+    .b-cat    { background: #1c2a1c; color: #6ee7b7; }
+    .b-color  { background: #2a1c1c; color: #fca5a5; }
+
+    .state-msg { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 48px 24px; color: var(--dim); text-align: center; gap: 8px; min-height: 200px; }
+    .state-msg .icon { font-size: 32px; }
+    .state-msg .msg { font-size: 13px; line-height: 1.5; }
+    .state-msg .sub { font-size: 11px; }
+    .err-text { color: var(--red) !important; }
+
+    .skel-item { padding: 10px 13px; border-bottom: 1px solid #1d1d38; animation: shimmer 1.4s infinite; }
+    .skel-line { background: var(--border); border-radius: 4px; height: 10px; margin-bottom: 5px; }
+    @keyframes shimmer { 0%,100%{opacity:.3} 50%{opacity:.7} }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════ SETUP SCREEN ═══════════════════ -->
+<div id="setup-screen">
+  <div class="setup-logo">⚡ POP Genie</div>
+  <div class="setup-sub">Search Engine Dashboard &mdash; credentials stay in your tab only, never stored anywhere</div>
+
+  <!-- STEP 1: Paste -->
+  <div id="step-paste" class="setup-card" style="border-color:#3b3b60">
+    <div class="setup-card-title">
+      <span style="color:var(--purple2)">▋</span>
+      <span style="color:var(--purple2)">Step 1 — Paste config JSON</span>
+      <span style="color:var(--dim);font-weight:400;font-size:11px;margin-left:auto">shared by your team lead</span>
+    </div>
+    <textarea class="json-textarea" id="json-paste" rows="6"
+      placeholder='{"popbeToken":"Token …","geminiKey":"AQ.…","supabaseKey":"eyJ…","sherlockJwt":"eyJ…","sherlockUserId":"019a…","coinBalance":15000}'
+      oninput="resetPreview()"></textarea>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="btn-save" style="flex:1" onclick="formatAndPreview()">Format &amp; Validate →</button>
+      <button id="btn-clear" onclick="clearPaste()" style="background:var(--card);border:1px solid var(--border);color:var(--muted);border-radius:10px;padding:10px 16px;font-size:13px;cursor:pointer;display:none">Clear</button>
+    </div>
+    <div id="parse-error" style="color:var(--red);font-size:12px;margin-top:8px;display:none"></div>
+  </div>
+
+  <!-- STEP 2: Preview (shown after successful parse) -->
+  <div id="step-preview" style="display:none;width:100%;max-width:560px">
+    <div class="setup-card" style="border-color:#1a4a1a">
+      <div class="setup-card-title">
+        <span style="color:var(--green)">▋</span>
+        <span style="color:var(--green)">Step 2 — Verify parsed fields</span>
+      </div>
+      <div id="field-preview"></div>
+      <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+        <div style="font-size:11px;color:var(--dim);margin-bottom:10px">Formatted JSON</div>
+        <pre id="json-formatted" style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:11px;color:var(--muted);overflow-x:auto;white-space:pre-wrap;word-break:break-all;max-height:160px;overflow-y:auto"></pre>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;width:100%;margin-bottom:4px">
+      <button onclick="backToPaste()" style="background:var(--card);border:1px solid var(--border);color:var(--muted);border-radius:10px;padding:13px 20px;font-size:14px;cursor:pointer">← Back</button>
+      <button id="btn-open" class="btn-save" style="flex:1" onclick="saveFromParsed()">Open Dashboard →</button>
+    </div>
+  </div>
+
+  <!-- DIVIDER -->
+  <div style="display:flex;align-items:center;gap:12px;width:100%;max-width:560px;margin:8px 0">
+    <div style="flex:1;height:1px;background:var(--border)"></div>
+    <span style="color:var(--dim);font-size:11px">or fill manually</span>
+    <div style="flex:1;height:1px;background:var(--border)"></div>
+  </div>
+
+  <!-- SECONDARY: individual fields -->
+  <div class="setup-card">
+    <div class="setup-card-title"><span class="v2c">▋</span><span class="v2c">V2 — BM25</span></div>
+    <div class="field-group">
+      <div class="field-label"><span>POPBE Token</span><code>Authorization: Token …</code></div>
+      <input class="field-input" id="f-popbe-token" type="password" autocomplete="off" placeholder="Token …" />
+    </div>
+  </div>
+
+  <div class="setup-card">
+    <div class="setup-card-title"><span class="v3c">▋</span><span class="v3c">V3 — pgvector</span></div>
+    <div class="field-group">
+      <div class="field-label"><span>Gemini API Key</span><code>?key=…</code></div>
+      <input class="field-input" id="f-gemini-key" type="password" autocomplete="off" placeholder="AQ.…" />
+    </div>
+    <div class="field-group">
+      <div class="field-label"><span>Supabase Service Role Key</span><code>Bearer …</code></div>
+      <input class="field-input" id="f-supabase-key" type="password" autocomplete="off" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9…" />
+    </div>
+  </div>
+
+  <div class="setup-card">
+    <div class="setup-card-title"><span class="v4c">▋</span><span class="v4c">V4 — Sherlock</span></div>
+    <div class="field-group">
+      <div class="field-label"><span>Bearer JWT</span><code>Authorization: Bearer …</code></div>
+      <input class="field-input" id="f-sherlock-jwt" type="password" autocomplete="off" placeholder="eyJhbGciOiJSUzI1NiIs…" />
+    </div>
+    <div class="field-group">
+      <div class="field-label"><span>User ID</span><code>X-Userid: …</code></div>
+      <input class="field-input" id="f-sherlock-uid" type="text" autocomplete="off" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" />
+    </div>
+  </div>
+
+  <div class="setup-card">
+    <div class="setup-card-title"><span class="gen-c">▋</span><span>General</span></div>
+    <div class="field-group">
+      <div class="field-label"><span>Coin balance</span><code>coin_balance</code></div>
+      <input class="field-input" id="f-coins" type="number" value="15000" min="0" style="font-family:inherit" />
+    </div>
+  </div>
+
+  <button class="btn-save" onclick="saveConfig()">Save &amp; Open Dashboard →</button>
+  <div class="setup-error" id="setup-error"></div>
+</div>
+
+<!-- ═══════════════════ MAIN SCREEN ════════════════════ -->
+<div id="main-screen">
+  <div class="topbar">
+    <span class="logo">⚡ POP Genie</span>
+    <span style="font-size:12px;color:var(--muted)">Search Engine Comparison</span>
+    <div class="topbar-sep"></div>
+    <span class="user-pill" id="uid-pill">—</span>
+    <button class="btn-settings" onclick="openSetup()">⚙ Credentials</button>
+  </div>
+
+  <div class="search-wrap">
+    <div class="search-row">
+      <input class="search-input" id="queryInput" type="text"
+        placeholder="Try: 'blue shirts', 'gym ke liye shorts chahiye', 'Nike shoes under 3000'…"
+        autocomplete="off" />
+      <div class="coin-wrap">
+        <label>🪙 Coins</label>
+        <input class="coin-input" id="coinInput" type="number" min="0" />
+      </div>
+      <button class="btn-search" id="searchBtn" onclick="runSearch()">Search</button>
+    </div>
+    <p class="hint">Up to 200 results per engine · Raw queries, no preprocessing · All 3 run in parallel</p>
+  </div>
+
+  <div class="results-grid">
+    <!-- V2 -->
+    <div class="engine-col">
+      <div class="engine-header">
+        <span class="engine-name v2c">V2 — BM25</span>
+        <span class="engine-desc">POP-BE OpenSearch</span>
+        <span class="status-pill s-idle" id="status-v2">Idle</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="prog-v2"></div></div>
+      <div class="stats-row" id="stats-v2">
+        <span class="stat">📦 <strong id="count-v2">—</strong></span>
+        <span class="stat">⏱ <strong id="lat-v2">—</strong></span>
+      </div>
+      <div class="product-list" id="list-v2"><div class="state-msg"><span class="icon">🔍</span><span class="msg">BM25 results will appear here</span></div></div>
+    </div>
+
+    <!-- V3 -->
+    <div class="engine-col">
+      <div class="engine-header">
+        <span class="engine-name v3c">V3 — pgvector</span>
+        <span class="engine-desc">Gemini embed + Supabase HNSW</span>
+        <span class="status-pill s-idle" id="status-v3">Idle</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="prog-v3"></div></div>
+      <div class="stats-row" id="stats-v3">
+        <span class="stat">📦 <strong id="count-v3">—</strong></span>
+        <span class="stat">⏱ <strong id="lat-v3">—</strong></span>
+        <span class="stat">🧠 <strong id="embed-v3">—</strong></span>
+      </div>
+      <div class="product-list" id="list-v3"><div class="state-msg"><span class="icon">🔍</span><span class="msg">pgvector results will appear here</span></div></div>
+    </div>
+
+    <!-- V4 -->
+    <div class="engine-col">
+      <div class="engine-header">
+        <span class="engine-name v4c">V4 — Sherlock</span>
+        <span class="engine-desc">NL search · api.popclub.co.in</span>
+        <span class="status-pill s-idle" id="status-v4">Idle</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="prog-v4"></div></div>
+      <div class="stats-row" id="stats-v4">
+        <span class="stat">📦 <strong id="count-v4">—</strong></span>
+        <span class="stat">⏱ <strong id="lat-v4">—</strong></span>
+      </div>
+      <div class="product-list" id="list-v4"><div class="state-msg"><span class="icon">🔍</span><span class="msg">Sherlock results will appear here</span></div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Config storage (sessionStorage — tab only, never persisted to disk) ───────
+const STORAGE_KEY = "genie-eval-cfg-v1";
+const SUPABASE_BASE = "https://psxlpkpjidphusqsabuw.supabase.co";
+const POPBE_BASE    = "https://app.popclub.co.in";
+
+function loadCfg() {
+  try { return JSON.parse(sessionStorage.getItem(STORAGE_KEY) || "null"); } catch { return null; }
+}
+function saveCfg(c) { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(c)); }
+function clearCfg() { sessionStorage.removeItem(STORAGE_KEY); }
+
+// ── Setup screen ──────────────────────────────────────────────────────────────
+// Holds the successfully parsed config between step 1 and step 2
+let _parsedCfg = null;
+
+function normaliseRaw(raw) {
+  // Strip invisible/control chars injected by browsers during copy-paste
+  raw = raw
+    .replace(/[\uFEFF\u200B\u200C\u200D\u00AD]/g, "")  // zero-width + BOM + soft-hyphen
+    .replace(/[\u201C\u201D]/g, '"')                        // smart double quotes
+    .replace(/[\u2018\u2019]/g, "'")                        // smart single quotes
+    .replace(/\u00A0/g, " ")                                 // non-breaking space
+    .replace(/^```[a-z]*\s*/im, "").replace(/\s*```$/m, "") // markdown fence
+    .trim();
+  // Strip ALL control characters (0x00-0x1F except tab/LF/CR, plus 0x7F)
+  // Browsers silently insert these when wrapping long lines in code blocks
+  raw = raw.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
+  // If there are literal newlines inside JSON string values, remove them
+  // (happens when the chat UI renders long JWT across multiple visual lines)
+  raw = raw.replace(/"([^"]*)"/g, function(match, val) {
+    return '"' + val.replace(/[\r\n\t]+/g, "") + '"';
+  });
+  return raw;
+}
+
+function formatAndPreview() {
+  const raw = normaliseRaw(document.getElementById("json-paste").value);
+  const errEl = document.getElementById("parse-error");
+  errEl.style.display = "none";
+  if (!raw) { showParseError("Nothing to parse — paste your config JSON first"); return; }
+  let c;
+  try { c = JSON.parse(raw); }
+  catch(e) {
+    const msg = e.message || String(e);
+    const posMatch = msg.match(/position (\d+)/i);
+    let hint = msg;
+    if (posMatch) {
+      const pos = parseInt(posMatch[1]);
+      const snippet = raw.slice(Math.max(0, pos - 15), pos + 15).replace(/\n/g, "\\n");
+      hint += "  near: ..." + snippet + "...";
+    }
+    showParseError("Parse error: " + hint);
+    return;
+  }
+  const FIELDS = [
+    { key:"popbeToken",     label:"POPBE Token",              engine:"V2" },
+    { key:"geminiKey",      label:"Gemini API Key",           engine:"V3" },
+    { key:"supabaseKey",    label:"Supabase Service Role Key",engine:"V3" },
+    { key:"sherlockJwt",    label:"Sherlock Bearer JWT",      engine:"V4" },
+    { key:"sherlockUserId", label:"Sherlock User ID",         engine:"V4" },
+    { key:"coinBalance",    label:"Coin Balance",             engine:"--" },
+  ];
+  const cfg = {
+    popbeToken:    (c.popbeToken     || "").trim(),
+    geminiKey:     (c.geminiKey      || "").trim(),
+    supabaseKey:   (c.supabaseKey    || "").trim(),
+    sherlockJwt:   (c.sherlockJwt    || "").trim(),
+    sherlockUserId:(c.sherlockUserId || "").trim(),
+    coinBalance:   parseInt(c.coinBalance) || 15000,
+  };
+  let rows = "";
+  let allOk = true;
+  for (const f of FIELDS) {
+    const val = cfg[f.key];
+    const present = f.key === "coinBalance" ? true : !!val;
+    if (!present) allOk = false;
+    const icon  = present ? "✅" : "❌";
+    const color = present ? "var(--text)" : "var(--red)";
+    const preview = f.key === "coinBalance"
+      ? String(cfg.coinBalance)
+      : val ? (val.length > 40 ? val.slice(0, 18) + "..." + val.slice(-10) : val)
+             : "missing";
+    rows += "<div style=\"display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)\">"
+      + "<span style=\"font-size:15px;margin-top:1px\">" + icon + "</span>"
+      + "<div style=\"flex:1;min-width:0\">"
+      + "<div style=\"font-size:11px;color:var(--muted);margin-bottom:2px\">" + f.label + " <span style=\"color:var(--dim)\">(" + f.engine + ")</span></div>"
+      + "<div style=\"font-size:12px;color:" + color + ";font-family:monospace;word-break:break-all\">" + preview.replace(/&/g,"&amp;").replace(/</g,"&lt;") + "</div>"
+      + "</div></div>";
+  }
+  document.getElementById("field-preview").innerHTML = rows;
+  const masked = {};
+  for (const [k,v] of Object.entries(cfg)) {
+    masked[k] = k === "coinBalance" ? v
+      : (typeof v === "string" && v.length > 24 ? v.slice(0,14) + "..." + v.slice(-8) : v);
+  }
+  document.getElementById("json-formatted").textContent = JSON.stringify(masked, null, 2);
+  const openBtn = document.getElementById("btn-open");
+  if (!allOk) {
+    openBtn.style.background = "var(--red)";
+    openBtn.textContent = "Missing fields — fix JSON and re-paste";
+  } else {
+    openBtn.style.background = "";
+    openBtn.textContent = "Open Dashboard →";
+  }
+  document.getElementById("btn-clear").style.display = "block";
+  document.getElementById("step-paste").style.display = "none";
+  document.getElementById("step-preview").style.display = "block";
+  _parsedCfg = cfg;
+}
+
+function backToPaste() {
+  document.getElementById("step-preview").style.display = "none";
+  document.getElementById("step-paste").style.display = "block";
+}
+
+function resetPreview() { _parsedCfg = null; }
+
+function clearPaste() {
+  document.getElementById("json-paste").value = "";
+  document.getElementById("btn-clear").style.display = "none";
+  document.getElementById("parse-error").style.display = "none";
+  _parsedCfg = null;
+}
+
+function showParseError(msg) {
+  const el = document.getElementById("parse-error");
+  el.textContent = msg;
+  el.style.display = "block";
+}
+
+function saveFromParsed() {
+  if (!_parsedCfg) { backToPaste(); return; }
+  const missing = ["popbeToken","geminiKey","supabaseKey","sherlockJwt","sherlockUserId"]
+    .filter(k => !_parsedCfg[k]);
+  if (missing.length) { showParseError("Cannot open — missing: " + missing.join(", ")); return; }
+  saveCfg(_parsedCfg);
+  enterDashboard(_parsedCfg);
+}
+
+function showSetupError(msg) {
+  const el = document.getElementById("setup-error");
+  el.textContent = msg;
+  el.style.color = "var(--red)";
+}
+
+function saveConfig() {
+  const cfg = {
+    popbeToken:    document.getElementById("f-popbe-token").value.trim(),
+    geminiKey:     document.getElementById("f-gemini-key").value.trim(),
+    supabaseKey:   document.getElementById("f-supabase-key").value.trim(),
+    sherlockJwt:   document.getElementById("f-sherlock-jwt").value.trim(),
+    sherlockUserId:document.getElementById("f-sherlock-uid").value.trim(),
+    coinBalance:   parseInt(document.getElementById("f-coins").value) || 0,
+  };
+  const missing = [];
+  if (!cfg.popbeToken)     missing.push("POPBE Token");
+  if (!cfg.geminiKey)      missing.push("Gemini API Key");
+  if (!cfg.supabaseKey)    missing.push("Supabase Service Role Key");
+  if (!cfg.sherlockJwt)    missing.push("Sherlock JWT");
+  if (!cfg.sherlockUserId) missing.push("Sherlock User ID");
+  if (missing.length) {
+    showSetupError("Required: " + missing.join(", "));
+    return;
+  }
+  saveCfg(cfg);
+  enterDashboard(cfg);
+}
+
+function openSetup() {
+  const cfg = loadCfg();
+  if (cfg) {
+    document.getElementById("f-popbe-token").value   = cfg.popbeToken  || "";
+    document.getElementById("f-gemini-key").value    = cfg.geminiKey   || "";
+    document.getElementById("f-supabase-key").value  = cfg.supabaseKey || "";
+    document.getElementById("f-sherlock-jwt").value  = cfg.sherlockJwt || "";
+    document.getElementById("f-sherlock-uid").value  = cfg.sherlockUserId || "";
+    document.getElementById("f-coins").value         = cfg.coinBalance || 15000;
+  }
+  document.getElementById("main-screen").style.display = "none";
+  document.getElementById("setup-screen").style.display = "flex";
+}
+
+function enterDashboard(cfg) {
+  document.getElementById("setup-screen").style.display = "none";
+  document.getElementById("main-screen").style.display  = "block";
+  document.getElementById("coinInput").value = cfg.coinBalance || 15000;
+  const uid = cfg.sherlockUserId || "";
+  document.getElementById("uid-pill").textContent = uid ? uid.slice(0,8) + "…" : "no user";
+}
+
+// ── Boot ───────────────────────────────────────────────────────────────────────
+(function boot() {
+  const cfg = loadCfg();
+  if (cfg && cfg.popbeToken && cfg.sherlockJwt) { enterDashboard(cfg); }
+  else { document.getElementById("setup-screen").style.display = "flex"; }
+})();
+
+// ── UI helpers ─────────────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+const fmt = n => n ? "₹" + Math.round(n).toLocaleString("en-IN") : "";
+const fmtMs = ms => ms < 1000 ? ms + "ms" : (ms/1000).toFixed(1) + "s";
+
+function setStatus(v, cls, label) { const e=$(`status-${v}`); e.className="status-pill "+cls; e.textContent=label; }
+function setProg(v, p) { $(`prog-${v}`).style.width = p + "%"; }
+function showSkeleton(v, n=9) {
+  $(`list-${v}`).innerHTML = Array.from({length:n}, () =>
+    `<div class="skel-item"><div class="skel-line" style="width:40%;height:9px"></div><div class="skel-line" style="width:80%"></div><div class="skel-line" style="width:55%;height:9px"></div></div>`
+  ).join("");
+}
+function showState(v, icon, msg, sub="", err=false) {
+  $(`list-${v}`).innerHTML = `<div class="state-msg"><span class="icon">${icon}</span><span class="msg${err?" err-text":""}">${esc(msg)}</span>${sub?`<span class="sub">${esc(sub)}</span>`:""}</div>`;
+}
+function setStats(v, count, latMs, extra) {
+  $(`stats-${v}`).style.display = "flex";
+  $(`count-${v}`).textContent = count + " results";
+  $(`lat-${v}`).textContent = fmtMs(latMs);
+  if (extra) $(`embed-${v}`).textContent = extra;
+}
+
+// ── V2 BM25 ───────────────────────────────────────────────────────────────────
+async function searchV2(query, cfg) {
+  const t0 = Date.now();
+  setStatus("v2","s-loading","Loading…"); setProg("v2",10); showSkeleton("v2");
+  const all = [];
+  let page=1, totalPages=1;
+  try {
+    while (all.length < 200 && page <= totalPages && page <= 10) {
+      const url = page===1 ? `${POPBE_BASE}/api/search/v2/plp/` : `${POPBE_BASE}/api/search/v2/plp/?page=${page}`;
+      const res = await fetch(url, {
+        method:"POST",
+        headers:{
+          "content-type":"application/json",
+          "authorization": cfg.popbeToken.startsWith("Token ") ? cfg.popbeToken : "Token "+cfg.popbeToken,
+          "platform":"ios","os_type":"ios","app_version":"3.0.7",
+          "user-agent":"PopClub/3.0.7 (iPhone; iOS 17.0)",
+        },
+        body: JSON.stringify({ query }),
+        signal: AbortSignal.timeout(15000),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
+      const json = await res.json();
+      const block = json.data?.[0] ?? {};
+      const hits = block.hits ?? [];
+      if (!hits.length) break;
+      if (page===1) totalPages = Math.min(block.nbPages??1, Math.ceil(200/(block.hitsPerPage||20)));
+      for (const h of hits) {
+        const mrp   = parseFloat(h.offer_price_detail?.price?.mrp)||0;
+        const price = parseFloat(h.offer_price_detail?.price?.selling_price)||mrp;
+        const cash  = parseFloat(h.offer_price_detail?.product_offer?.payable_amount)||price;
+        const rating= parseFloat(h.ratings_info?.average_rating)||0;
+        all.push({ brand: h.brand_info?.name??"", title: h.title??"", price, mrp: mrp>price?mrp:0, coins: Math.max(0,Math.round(price-cash)), rating: rating>=4?rating:0 });
+        if (all.length>=200) break;
+      }
+      setProg("v2", Math.min(90, 10 + (page/totalPages)*80));
+      page++;
+    }
+    const lat = Date.now()-t0;
+    setProg("v2",100);
+    renderPriced("v2", all, lat);
+    setStatus("v2", all.length?"s-ok":"s-error", all.length?`${all.length} results`:"No results");
+  } catch(e) {
+    const lat=Date.now()-t0; setProg("v2",100);
+    const cors = e.message.includes("Failed to fetch")||e.message.includes("NetworkError");
+    setStatus("v2","s-error","Error");
+    showState("v2","⚠️", cors?"CORS blocked — browser can't reach POP-BE directly":e.message, cors?"This API is mobile-only. Results may not load in browser.":"", true);
+    setStats("v2",0,lat);
+  }
+}
+
+// ── V3 pgvector ───────────────────────────────────────────────────────────────
+async function searchV3(query, cfg) {
+  const t0=Date.now();
+  setStatus("v3","s-loading","Embedding…"); setProg("v3",5); showSkeleton("v3");
+  try {
+    const eRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent?key=${cfg.geminiKey}`,{
+      method:"POST",
+      headers:{"content-type":"application/json"},
+      body:JSON.stringify({ model:"models/gemini-embedding-001", content:{parts:[{text:query}]}, outputDimensionality:768 }),
+      signal:AbortSignal.timeout(12000),
+    });
+    if (!eRes.ok) throw new Error(`Gemini ${eRes.status}: ${await eRes.text().catch(()=>"")}`);
+    const eJson = await eRes.json();
+    const values = eJson.embedding?.values;
+    if (!values?.length) throw new Error("Gemini returned no embedding");
+    const embedMs = Date.now()-t0;
+    setStatus("v3","s-loading","Searching…"); setProg("v3",45);
+
+    const rRes = await fetch(`${SUPABASE_BASE}/rest/v1/rpc/match_products`,{
+      method:"POST",
+      headers:{"Content-Type":"application/json","apikey":cfg.supabaseKey,"Authorization":"Bearer "+cfg.supabaseKey},
+      body:JSON.stringify({ query_embedding:values, match_count:200 }),
+      signal:AbortSignal.timeout(25000),
+    });
+    if (!rRes.ok) {
+      const b=await rRes.text().catch(()=>"");
+      throw new Error(`Supabase ${rRes.status}: ${b.slice(0,100)}`);
+    }
+    const rows = await rRes.json();
+    if (!Array.isArray(rows)) throw new Error("Unexpected Supabase response shape");
+    const lat=Date.now()-t0; setProg("v3",100);
+    renderEmbedded("v3", rows, lat, embedMs);
+    setStatus("v3",rows.length?"s-ok":"s-error", rows.length?`${rows.length} results`:"No results");
+  } catch(e) {
+    const lat=Date.now()-t0; setProg("v3",100);
+    setStatus("v3","s-error","Error");
+    showState("v3","⚠️",e.message,"",true);
+    setStats("v3",0,lat);
+  }
+}
+
+// ── V4 Sherlock ───────────────────────────────────────────────────────────────
+async function searchV4(query, cfg) {
+  const t0=Date.now();
+  setStatus("v4","s-loading","Loading…"); setProg("v4",15); showSkeleton("v4");
+  try {
+    const res = await fetch("https://api.popclub.co.in/api/v2/search/ask",{
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json",
+        "Authorization": "Bearer "+cfg.sherlockJwt.replace(/^Bearer\s+/i,""),
+        "X-Userid":cfg.sherlockUserId,
+      },
+      body:JSON.stringify({ query_text:query, coin_balance:cfg.coinBalance }),
+      signal:AbortSignal.timeout(20000),
+    });
+    setProg("v4",80);
+    const lat=Date.now()-t0;
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${(await res.text().catch(()=>"")).slice(0,120)}`);
+    const json = await res.json();
+    if (!json.is_success) throw new Error(`is_success=false`);
+    const hits = (json.data??[]).flatMap(g=>g.hits??[]);
+    const products = hits.map(h=>{
+      const price=h.offer_price_detail?.price?.selling_price??0;
+      const mrp  =h.offer_price_detail?.price?.mrp??0;
+      const cash =h.offer_price_detail?.product_offer?.payable_amount??price;
+      const rating=h.ratings_info?.average_rating??0;
+      return { brand:h.brand_info?.name??"", title:h.title??"", price, mrp:mrp>price?mrp:0, coins:Math.max(0,Math.round(price-cash)), rating:rating>=4?rating:0 };
+    });
+    setProg("v4",100);
+    renderPriced("v4", products, lat);
+    setStatus("v4",products.length?"s-ok":"s-error", products.length?`${products.length} results`:"No results");
+  } catch(e) {
+    const lat=Date.now()-t0; setProg("v4",100);
+    setStatus("v4","s-error","Error");
+    showState("v4","⚠️",e.message,"",true);
+    setStats("v4",0,lat);
+  }
+}
+
+// ── Renderers ─────────────────────────────────────────────────────────────────
+function renderPriced(ver, products, latMs) {
+  setStats(ver, products.length, latMs);
+  if (!products.length) { showState(ver,"🔎","No results returned","Try a different query"); return; }
+  $(`list-${ver}`).innerHTML = products.map((p,i)=>`
+    <div class="product-item">
+      <span class="rank">${i+1}</span>
+      <div class="product-body">
+        <div class="product-brand">${esc(p.brand)}</div>
+        <div class="product-title">${esc(p.title)}</div>
+        <div class="product-meta">
+          ${p.price?`<span class="price">${fmt(p.price)}</span>`:""}
+          ${p.mrp  ?`<span class="mrp">${fmt(p.mrp)}</span>`:""}
+          ${p.coins>0?`<span class="badge b-coins">🪙 ${p.coins}</span>`:""}
+          ${p.rating>0?`<span class="badge b-rating">★ ${p.rating.toFixed(1)}</span>`:""}
+        </div>
+      </div>
+    </div>`).join("");
+}
+
+function renderEmbedded(ver, rows, latMs, embedMs) {
+  $(`stats-${ver}`).style.display="flex";
+  $(`count-${ver}`).textContent = rows.length+" results";
+  $(`lat-${ver}`).textContent   = fmtMs(latMs);
+  $(`embed-${ver}`).textContent  = fmtMs(embedMs);
+  if (!rows.length) { showState(ver,"🔎","No results returned"); return; }
+  $(`list-${ver}`).innerHTML = rows.map((r,i)=>`
+    <div class="product-item">
+      <span class="rank">${i+1}</span>
+      <div class="product-body">
+        <div class="product-brand">${esc(r.brand)}</div>
+        <div class="product-title">${esc(r.title)}</div>
+        <div class="product-meta">
+          ${r.category ?`<span class="badge b-cat">${esc(r.category)}</span>`:""}
+          ${r.ideal_for?`<span class="badge b-cat">${esc(r.ideal_for)}</span>`:""}
+          ${r.color    ?`<span class="badge b-color">${esc(r.color)}</span>`:""}
+          ${r.similarity!=null?`<span class="badge b-sim">${(r.similarity*100).toFixed(1)}%</span>`:""}
+        </div>
+      </div>
+    </div>`).join("");
+}
+
+// ── Run ───────────────────────────────────────────────────────────────────────
+async function runSearch() {
+  const query = $("queryInput").value.trim();
+  if (!query) { $("queryInput").focus(); return; }
+  const cfg = loadCfg();
+  if (!cfg) { openSetup(); return; }
+  cfg.coinBalance = parseInt($("coinInput").value)||0;
+
+  $("searchBtn").disabled = true;
+  ["v2","v3","v4"].forEach(v=>{ $(`stats-${v}`).style.display="none"; setProg(v,0); });
+
+  await Promise.allSettled([searchV2(query,cfg), searchV3(query,cfg), searchV4(query,cfg)]);
+  $("searchBtn").disabled = false;
+}
+
+$("queryInput").addEventListener("keydown", e=>{ if(e.key==="Enter") runSearch(); });
+</script>
+</body>
+</html>
